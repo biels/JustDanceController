@@ -33,14 +33,14 @@ import java.util.concurrent.TimeUnit;
 
 public class MainActivity extends AppCompatActivity {
 
-    private RadioGroup serverGroup;
     private final ActiveServersList activeServers = new ActiveServersList();
     private final Map<Integer, UdpwiiServer> localActiveServersList = new TreeMap<>();
     private final ScheduledExecutorService maintenanceExecutor =
             Executors.newSingleThreadScheduledExecutor();
     private final byte[] buffer = new byte[512];
-    private DatagramSocket broadcastSocket;
     private final DatagramPacket broadcastPacket = new DatagramPacket(buffer, buffer.length);
+    private RadioGroup serverGroup;
+    private DatagramSocket broadcastSocket;
     private SharedPreferences settings;
 
     @Override
@@ -97,7 +97,9 @@ public class MainActivity extends AppCompatActivity {
         aboutButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                aboutDialog.show();
+                Intent i = new Intent(MainActivity.this, SettingsActivity.class);
+                startActivity(i);
+//                aboutDialog.show();
             }
         });
 
