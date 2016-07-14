@@ -67,6 +67,10 @@
             sample:msbp_interval="1"
             sample:msbp_measurementUnit="%"
             sample:msbp_dialogEnabled="false"/>
+        <SwitchPreference android:title="Lowest sensor delay"
+            android:key="sensor-fastest"
+            android:summary="Requests OS to provide sensor updates at the fastest rate."
+            android:defaultValue="true"/>
 
 
     </PreferenceCategory>

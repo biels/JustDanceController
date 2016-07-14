@@ -63,6 +63,8 @@ public class ControllerActivity extends Activity implements SensorEventListener 
     int period;
     private float GAMMA;
     private float CENTER;
+    private boolean fastestSamplingRate;
+    private int samplingPeriodUs;
 
     @SuppressLint("ShowToast")
     @Override
@@ -82,20 +84,23 @@ public class ControllerActivity extends Activity implements SensorEventListener 
         ALPHA = settings.getInt("low-pass-alpha", 15) / 100F;
         GAMMA = settings.getInt("acceleration-gamma", 1) / 100F;
         CENTER = settings.getInt("acceleration-center", 450) / 100F;
-        accelerometer = new AtomicAccelerometerData(ALPHA, GAMMA, CENTER);
+        fastestSamplingRate = settings.getBoolean("sensor-fastest", false);
+        samplingPeriodUs = fastestSamplingRate ? SensorManager.SENSOR_DELAY_FASTEST : SensorManager.SENSOR_DELAY_GAME;
+        accelerometer = new AtomicAccelerometerData(ALPHA, GAMMA, CENTER, freeFallFrame);
 
         SensorManager sensorManager = (SensorManager) getSystemService(SENSOR_SERVICE);
         if(freeFallFrame){
+
             sensorManager.registerListener(this,
                     sensorManager.getDefaultSensor(Sensor.TYPE_LINEAR_ACCELERATION),
-                    SensorManager.SENSOR_DELAY_GAME);
+                    samplingPeriodUs);
             sensorManager.registerListener(this,
                     sensorManager.getDefaultSensor(Sensor.TYPE_GRAVITY),
-                    SensorManager.SENSOR_DELAY_GAME);
+                    samplingPeriodUs);
         }else{
             sensorManager.registerListener(this,
                     sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER),
-                    SensorManager.SENSOR_DELAY_GAME);
+                    samplingPeriodUs);
         }
 
 
@@ -261,12 +266,17 @@ public class ControllerActivity extends Activity implements SensorEventListener 
     public void onSensorChanged(SensorEvent event) {
        // final float maximumRange = event.sensor.getMaximumRange();
         //Toast.makeText(this,"maximumRange: " + maximumRange, Toast.LENGTH_SHORT).show();
-        if(freeFallFrame)
-        if(event.sensor.getType() == Sensor.TYPE_LINEAR_ACCELERATION)
-        accelerometer.setV(event.values, scalingFactor);
+        if(freeFallFrame){
+            if(event.sensor.getType() == Sensor.TYPE_LINEAR_ACCELERATION)
+                accelerometer.setV(event.values, scalingFactor);
 
-        if(event.sensor.getType() == Sensor.TYPE_GRAVITY)
-            accelerometer.setG(event.values, gravityScalingFactor);
+            if(event.sensor.getType() == Sensor.TYPE_GRAVITY)
+                accelerometer.setG(event.values, gravityScalingFactor);
+        }else{
+            if(event.sensor.getType() == Sensor.TYPE_ACCELEROMETER)
+                accelerometer.setV(event.values, scalingFactor);
+        }
+
     }
 
     /*
@@ -362,18 +372,25 @@ class AtomicAccelerometerData {
     float CENTER;
     private final float[] v = new float[3];
     private final float[] g = new float[3];
+    boolean freeFall;
 
-    public AtomicAccelerometerData(float ALPHA, float GAMMA, float CENTER) {
+    public AtomicAccelerometerData(float ALPHA, float GAMMA, float CENTER, boolean freeFall) {
         this.ALPHA = ALPHA;
         this.GAMMA = GAMMA;
         this.CENTER = CENTER;
+        this.freeFall = freeFall;
     }
 
     public synchronized void get(float r[]) {
-        for(int i=0; i < 3; i++){
-            r[i] = v[i] - g[i];
+        if(freeFall){
+            for(int i=0; i < 3; i++){
+                r[i] = v[i] - g[i];
+            }
+        }else{
+            for(int i=0; i < 3; i++){
+                r[i] = v[i];
+            }
         }
-
     }
     protected float[] lowPass( float[] input, float[] output) {
         if ( output == null ) return input;
@@ -413,8 +430,8 @@ class AtomicIRData {
     private final float[] v = new float[2];
 
     public AtomicIRData() {
-        v[0] = 0.5f;
-        v[1] = 0.5f;
+        v[0] = 0.f;
+        v[1] = 0.f;
     }
 
     public synchronized void get(float r[]) {
