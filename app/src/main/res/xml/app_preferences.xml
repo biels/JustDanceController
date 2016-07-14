@@ -1,26 +1,81 @@
 <?xml version="1.0" encoding="utf-8"?>
-<PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android">
+<PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android" xmlns:sample="http://schemas.android.com/apk/res-auto" xmlns:seekbarunit="http://schemas.android.com/apk/res/android">
     <PreferenceCategory
         android:title="Accelerometer">
-        <ListPreference
-            android:title="Scaling factor"
+        <com.pavelsikun.seekbarpreference.SeekBarPreference
+            android:title="Acceleration scaling"
             android:key="scaling-factor"
-            android:summary="Defines the scaling factor applied to the output acceleration vector"/>
+            android:summary="Defines the scaling factor applied to the output acceleration vector"
+            android:enabled="true"
+            android:defaultValue="155"
 
+            sample:msbp_minValue="50"
+            sample:msbp_maxValue="200"
+            sample:msbp_interval="5"
+            sample:msbp_measurementUnit="%"
+            sample:msbp_dialogEnabled="false"/>
         <SwitchPreference
-            android:title="Linear acceleration"
-            android:key="linear-acceleration"
-            android:summary="Enables gravity filtering" />
+            android:title="Free fall"
+            android:key="free-fall-frame"
+            android:summary="Low pass filter to separate gravity from other forces" />
+        <com.pavelsikun.seekbarpreference.SeekBarPreference
+            android:title="Gravity scaling"
+            android:key="gravity-scaling-factor"
+            android:summary="Defines the scaling factor applied to the filtered gravity"
+            android:enabled="true"
+            android:defaultValue="100"
 
+            sample:msbp_minValue="-100"
+            sample:msbp_maxValue="100"
+            sample:msbp_interval="5"
+            sample:msbp_measurementUnit="%"
+            sample:msbp_dialogEnabled="false"/>
 
+        <com.pavelsikun.seekbarpreference.SeekBarPreference
+            android:title="Low-pass filter alpha"
+            android:key="low-pass-alpha"
+            android:summary="Defines the value of the alpha coefficient used in the low pass filter. A smaller alpha means more smoothing."
+            android:enabled="true"
+            android:defaultValue="100"
+
+            sample:msbp_minValue="40"
+            sample:msbp_maxValue="100"
+            sample:msbp_interval="1"
+            sample:msbp_measurementUnit="%"
+            sample:msbp_dialogEnabled="false"/>
+        <com.pavelsikun.seekbarpreference.SeekBarPreference
+            android:title="Acceleration gamma"
+            android:key="acceleration-gamma"
+            android:summary="Defines the exponent that is applied to the output acceleration vector, downscaled by a factor of 100."
+            android:enabled="true"
+            android:defaultValue="88"
+
+            sample:msbp_minValue="65"
+            sample:msbp_maxValue="110"
+            sample:msbp_interval="1"
+            sample:msbp_measurementUnit="%"
+            sample:msbp_dialogEnabled="false"/>
 
     </PreferenceCategory>
     <PreferenceCategory android:title="User Interface">
         <SwitchPreference android:title="Absolute IR Pointer"
             android:key="abs-ir-pointer"
-            android:summary="Directly maps every point in the touchscreen to a point from the real screen"
+            android:summary="Directly maps every point from the touchscreen to a point in the real screen"
             android:defaultValue="true"/>
 
     </PreferenceCategory>
+    <PreferenceCategory android:title="Network">
+        <com.pavelsikun.seekbarpreference.SeekBarPreference
+            android:title="Packet send delay"
+            android:key="packet-delay"
+            android:summary="Defines the wait time to send every UDP packet"
+            android:enabled="true"
+            android:defaultValue="33"
 
+            sample:msbp_minValue="1"
+            sample:msbp_maxValue="40"
+            sample:msbp_interval="1"
+            sample:msbp_measurementUnit="ms"
+            sample:msbp_dialogEnabled="false"/>
+    </PreferenceCategory>
 </PreferenceScreen>

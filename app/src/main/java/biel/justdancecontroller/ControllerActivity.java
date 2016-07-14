@@ -1,7 +1,10 @@
 package biel.justdancecontroller;
 
 import android.annotation.SuppressLint;
+import android.content.SharedPreferences;
+import android.graphics.Color;
 import android.os.Bundle;
+import android.preference.PreferenceManager;
 import android.view.MotionEvent;
 import android.view.View;
 
@@ -46,13 +49,19 @@ public class ControllerActivity extends Activity implements SensorEventListener 
     private DatagramPacket sendPacket;
     private final AtomicButtonMask buttonMask = new AtomicButtonMask();
     private final Map<Integer, Integer> maskMap = new HashMap<>();
-    private final AtomicAccelerometerData accelerometer = new AtomicAccelerometerData();
+    private AtomicAccelerometerData accelerometer;
     private final float[] localAccelerometer = new float[3];
     private float lastX = 0.f;
     private float lastY = 0.f;
     private final AtomicIRData ir = new AtomicIRData();
     private final float[] localIR = new float[2];
+    private SharedPreferences settings;
     final int accSensorType = Sensor.TYPE_ACCELEROMETER;
+    private float scalingFactor;
+    private float gravityScalingFactor;
+    private boolean freeFallFrame;
+    int period;
+    private float GAMMA;
 
     @SuppressLint("ShowToast")
     @Override
@@ -62,31 +71,60 @@ public class ControllerActivity extends Activity implements SensorEventListener 
         backToast = Toast.makeText(getApplicationContext(), null, Toast.LENGTH_SHORT);
         PowerManager pm = (PowerManager) getSystemService(Context.POWER_SERVICE);
         //noinspection deprecation
-        wl = pm.newWakeLock(PowerManager.SCREEN_DIM_WAKE_LOCK, "dolphindroid");
+        wl = pm.newWakeLock(PowerManager.SCREEN_DIM_WAKE_LOCK, "jdctrl");
+
+        settings = PreferenceManager.getDefaultSharedPreferences(this);
+        scalingFactor = settings.getInt("scaling-factor", 100) / 100F;
+        freeFallFrame = settings.getBoolean("free-fall-frame", false);
+        gravityScalingFactor = settings.getInt("gravity-scaling-factor", 100) / 100F;
+        period = settings.getInt("packet-delay", 33);
+        ALPHA = settings.getInt("low-pass-alpha", 15) / 100F;
+        GAMMA = settings.getInt("acceleration-gamma", 1) / 100F;
+        accelerometer = new AtomicAccelerometerData(ALPHA, GAMMA);
 
         SensorManager sensorManager = (SensorManager) getSystemService(SENSOR_SERVICE);
-        sensorManager.registerListener(this,
-                sensorManager.getDefaultSensor(accSensorType),
-                SensorManager.SENSOR_DELAY_GAME);
+        if(freeFallFrame){
+            sensorManager.registerListener(this,
+                    sensorManager.getDefaultSensor(Sensor.TYPE_LINEAR_ACCELERATION),
+                    SensorManager.SENSOR_DELAY_GAME);
+            sensorManager.registerListener(this,
+                    sensorManager.getDefaultSensor(Sensor.TYPE_GRAVITY),
+                    SensorManager.SENSOR_DELAY_GAME);
+        }else{
+            sensorManager.registerListener(this,
+                    sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER),
+                    SensorManager.SENSOR_DELAY_GAME);
+        }
 
+
+        final boolean absolute = settings.getBoolean("abs-ir-pointer", false);
+        Toast.makeText(this, Boolean.toString(absolute), Toast.LENGTH_LONG).show();
         GestureOverlayView gestureIR = (GestureOverlayView) findViewById(R.id.gesture_ir);
+        gestureIR.setUncertainGestureColor(absolute ? Color.RED : Color.GREEN);
         System.out.println(gestureIR.getMeasuredWidth() + "x" + gestureIR.getHeight());
         gestureIR.setOnTouchListener(new View.OnTouchListener() {
             @Override
             public boolean onTouch(View v, MotionEvent event) {
                 int action = event.getAction();
                 if (action == MotionEvent.ACTION_MOVE || action == MotionEvent.ACTION_DOWN) {
-                    //float ratio = //2.f/Math.max(v.getWidth(), v.getHeight());
-                    float x = (event.getX() / v.getWidth()) * 2 - 1;
-                    float y = ((v.getHeight() - event.getY()) / v.getHeight()) * 2 - 1;
-                    //If action == down, click A
-                    //if (action == MotionEvent.ACTION_MOVE) {
-                        //ir.add(x - lastX, -(y - lastY));
-                        ir.set(x, y);
-                    // }
-
-                    lastX = x;
-                    lastY = y;
+                    float x, y;
+                    if(absolute){
+                        x = (event.getX() / v.getWidth()) * 2 - 1;
+                        y = ((v.getHeight() - event.getY()) / v.getHeight()) * 2 - 1;
+                    }else{
+                       // If action == down, click A
+                        float ratio = 2.f/Math.max(v.getWidth(), v.getHeight());
+                        x = event.getX() * ratio;
+                        y = event.getY() * ratio;
+                        if (action == MotionEvent.ACTION_MOVE) {
+                            ir.add(x - lastX, -(y - lastY));
+                        }else {
+                            pressButton(R.id.button_a);
+                        }
+                        lastX = x;
+                        lastY = y;
+                    }
+                    ir.set(x, y);
                 }
                 return true;
             }
@@ -115,7 +153,7 @@ public class ControllerActivity extends Activity implements SensorEventListener 
                 public boolean onTouch(View v, MotionEvent event) {
                     int action = event.getAction();
                     if (action == MotionEvent.ACTION_DOWN || action == MotionEvent.ACTION_UP) {
-                        buttonMask.xor(maskMap.get(v.getId()));
+                        pressButton(v.getId());
                     }
                     return true;
                 }
@@ -156,7 +194,9 @@ public class ControllerActivity extends Activity implements SensorEventListener 
 
         sendExecutor.schedule(setupSendRunnable, 0, TimeUnit.MILLISECONDS);
     }
-
+    private void pressButton(int v){
+        buttonMask.xor(maskMap.get(v));
+    }
     private void scheduleSend() {
         Runnable sendRunnable = new Runnable() {
             @Override
@@ -203,13 +243,14 @@ public class ControllerActivity extends Activity implements SensorEventListener 
             }
         };
 
-        sendExecutor.scheduleAtFixedRate(sendRunnable, 33, 33, TimeUnit.MILLISECONDS);
+
+        sendExecutor.scheduleAtFixedRate(sendRunnable, period, period, TimeUnit.MILLISECONDS);
     }
 
     @Override
     public void onAccuracyChanged(Sensor sensor, int accuracy) {
         if(sensor.getType() == accSensorType){ //Swap with accelerometer
-            Toast.makeText(this,"Accelerometer accuracy: " + accuracy, Toast.LENGTH_LONG).show();
+            //Toast.makeText(this,"Accelerometer accuracy: " + accuracy, Toast.LENGTH_LONG).show();
         }
     }
 
@@ -217,9 +258,25 @@ public class ControllerActivity extends Activity implements SensorEventListener 
     public void onSensorChanged(SensorEvent event) {
        // final float maximumRange = event.sensor.getMaximumRange();
         //Toast.makeText(this,"maximumRange: " + maximumRange, Toast.LENGTH_SHORT).show();
-        accelerometer.set(event.values, 1);
+        if(freeFallFrame)
+        if(event.sensor.getType() == Sensor.TYPE_LINEAR_ACCELERATION)
+        accelerometer.setV(event.values, scalingFactor);
+
+        if(event.sensor.getType() == Sensor.TYPE_GRAVITY)
+            accelerometer.setG(event.values, gravityScalingFactor);
     }
-    //Apply transformation matrix
+
+    /*
+     * time smoothing constant for low-pass filter
+     * 0 ≤ alpha ≤ 1 ; a smaller value basically means more smoothing
+     * See: http://en.wikipedia.org/wiki/Low-pass_filter#Discrete-time_realization
+     */
+    static float ALPHA;
+
+    /**
+     * http://en.wikipedia.org/wiki/Low-pass_filter#Algorithmic_implementation
+     * http://developer.android.com/reference/android/hardware/SensorEvent.html#values
+     */
 
     @Override
     protected void onResume() {
@@ -297,19 +354,53 @@ class AtomicButtonMask {
 }
 
 class AtomicAccelerometerData {
+    float ALPHA;
+    float GAMMA;
     private final float[] v = new float[3];
+    private final float[] g = new float[3];
 
-    public synchronized void get(float r[]) {
-        r[0] = v[0];
-        r[1] = v[1];
-        r[2] = v[2];
+    public AtomicAccelerometerData(float ALPHA, float GAMMA) {
+        this.ALPHA = ALPHA;
+        this.GAMMA = GAMMA;
     }
 
-    public synchronized void set(float n[], float maximumRange) {
-        float m = 1.0F; //maybe increase
-        v[0] = -n[0] * m / maximumRange;
-        v[1] = -n[1] * m / maximumRange;
-        v[2] = n[2] * m / maximumRange;
+    public synchronized void get(float r[]) {
+        for(int i=0; i < 3; i++){
+            r[i] = v[i] - g[i];
+        }
+
+    }
+    protected float[] lowPass( float[] input, float[] output) {
+        if ( output == null ) return input;
+
+        for ( int i=0; i<input.length; i++ ) {
+            output[i] = output[i] + ALPHA * (input[i] - output[i]);
+        }
+        return output;
+    }
+    protected float[] power( float[] input, float[] output) {
+        if ( output == null ) return input;
+        float length = 0;
+        for ( int i=0; i<input.length; i++ ) length += Math.pow(input[i],2);
+        length = (float) Math.sqrt(length);
+        float factor = (float) (Math.pow(length, GAMMA) / length);
+        for ( int i=0; i<input.length; i++ ) {
+            output[i] = input[i] * factor;
+        }
+        return output;
+    }
+    public synchronized void setV(float n[], float scaling) {
+        power(n, n);
+        n[0] = -n[0] * scaling;
+        n[1] = -n[1] * scaling;
+        n[2] = n[2] * scaling;
+        lowPass(n, v);
+    }
+    public synchronized void setG(float n[], float scaling) {
+        n[0] = -n[0] * scaling;
+        n[1] = -n[1] * scaling;
+        n[2] = n[2] * scaling;
+        lowPass(n, g);
     }
 }
 
@@ -337,4 +428,5 @@ class AtomicIRData {
         v[1] += y;
         v[1] = Math.max(Math.min(v[1], 1.1f), -1.1f);
     }
+
 }
