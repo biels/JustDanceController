@@ -7,12 +7,36 @@
             android:key="scaling-factor"
             android:summary="Defines the scaling factor applied to the output acceleration vector"
             android:enabled="true"
-            android:defaultValue="155"
+            android:defaultValue="125"
 
             sample:msbp_minValue="50"
             sample:msbp_maxValue="200"
             sample:msbp_interval="5"
             sample:msbp_measurementUnit="%"
+            sample:msbp_dialogEnabled="false"/>
+        <com.pavelsikun.seekbarpreference.SeekBarPreference
+            android:title="Acceleration gamma"
+            android:key="acceleration-gamma"
+            android:summary="Defines the exponent that is applied to the output acceleration vector, downscaled by a factor of 100."
+            android:enabled="true"
+            android:defaultValue="110"
+
+            sample:msbp_minValue="75"
+            sample:msbp_maxValue="120"
+            sample:msbp_interval="1"
+            sample:msbp_measurementUnit="%"
+            sample:msbp_dialogEnabled="false"/>
+        <com.pavelsikun.seekbarpreference.SeekBarPreference
+            android:title="Acceleration center"
+            android:key="acceleration-center"
+            android:summary="Defines the center of the curvature created by the gamma value."
+            android:enabled="true"
+            android:defaultValue="602"
+
+            sample:msbp_minValue="150"
+            sample:msbp_maxValue="980"
+            sample:msbp_interval="2"
+            sample:msbp_measurementUnit="cm/s^2"
             sample:msbp_dialogEnabled="false"/>
         <SwitchPreference
             android:title="Free fall"
@@ -43,18 +67,7 @@
             sample:msbp_interval="1"
             sample:msbp_measurementUnit="%"
             sample:msbp_dialogEnabled="false"/>
-        <com.pavelsikun.seekbarpreference.SeekBarPreference
-            android:title="Acceleration gamma"
-            android:key="acceleration-gamma"
-            android:summary="Defines the exponent that is applied to the output acceleration vector, downscaled by a factor of 100."
-            android:enabled="true"
-            android:defaultValue="88"
 
-            sample:msbp_minValue="65"
-            sample:msbp_maxValue="110"
-            sample:msbp_interval="1"
-            sample:msbp_measurementUnit="%"
-            sample:msbp_dialogEnabled="false"/>
 
     </PreferenceCategory>
     <PreferenceCategory android:title="User Interface">

@@ -62,6 +62,7 @@ public class ControllerActivity extends Activity implements SensorEventListener 
     private boolean freeFallFrame;
     int period;
     private float GAMMA;
+    private float CENTER;
 
     @SuppressLint("ShowToast")
     @Override
@@ -80,7 +81,8 @@ public class ControllerActivity extends Activity implements SensorEventListener 
         period = settings.getInt("packet-delay", 33);
         ALPHA = settings.getInt("low-pass-alpha", 15) / 100F;
         GAMMA = settings.getInt("acceleration-gamma", 1) / 100F;
-        accelerometer = new AtomicAccelerometerData(ALPHA, GAMMA);
+        CENTER = settings.getInt("acceleration-center", 450) / 100F;
+        accelerometer = new AtomicAccelerometerData(ALPHA, GAMMA, CENTER);
 
         SensorManager sensorManager = (SensorManager) getSystemService(SENSOR_SERVICE);
         if(freeFallFrame){
@@ -111,6 +113,7 @@ public class ControllerActivity extends Activity implements SensorEventListener 
                     if(absolute){
                         x = (event.getX() / v.getWidth()) * 2 - 1;
                         y = ((v.getHeight() - event.getY()) / v.getHeight()) * 2 - 1;
+                        ir.set(x, y);
                     }else{
                        // If action == down, click A
                         float ratio = 2.f/Math.max(v.getWidth(), v.getHeight());
@@ -119,12 +122,12 @@ public class ControllerActivity extends Activity implements SensorEventListener 
                         if (action == MotionEvent.ACTION_MOVE) {
                             ir.add(x - lastX, -(y - lastY));
                         }else {
-                            pressButton(R.id.button_a);
+                            //pressButton(R.id.button_a);
                         }
                         lastX = x;
                         lastY = y;
                     }
-                    ir.set(x, y);
+
                 }
                 return true;
             }
@@ -356,12 +359,14 @@ class AtomicButtonMask {
 class AtomicAccelerometerData {
     float ALPHA;
     float GAMMA;
+    float CENTER;
     private final float[] v = new float[3];
     private final float[] g = new float[3];
 
-    public AtomicAccelerometerData(float ALPHA, float GAMMA) {
+    public AtomicAccelerometerData(float ALPHA, float GAMMA, float CENTER) {
         this.ALPHA = ALPHA;
         this.GAMMA = GAMMA;
+        this.CENTER = CENTER;
     }
 
     public synchronized void get(float r[]) {
@@ -383,7 +388,7 @@ class AtomicAccelerometerData {
         float length = 0;
         for ( int i=0; i<input.length; i++ ) length += Math.pow(input[i],2);
         length = (float) Math.sqrt(length);
-        float factor = (float) (Math.pow(length, GAMMA) / length);
+        float factor = (float) ((Math.pow(length / CENTER, GAMMA) * CENTER) / length);
         for ( int i=0; i<input.length; i++ ) {
             output[i] = input[i] * factor;
         }
