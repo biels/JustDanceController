@@ -14,7 +14,7 @@
         <android.gesture.GestureOverlayView
             android:layout_width="fill_parent"
             android:layout_height="0dp"
-            android:layout_weight="1"
+            android:layout_weight="1.82"
             android:id="@+id/gesture_ir">
         </android.gesture.GestureOverlayView>
 
@@ -125,7 +125,7 @@
                     android:id="@+id/button_b"
                     android:layout_column="1"
                     android:layout_weight="1"
-                    android:backgroundTint="@android:color/holo_red_dark" />
+                    android:backgroundTint="@android:color/holo_orange_light" />
             </TableRow>
 
             <TableRow
@@ -147,7 +147,7 @@
                     android:id="@+id/button_home"
                     android:layout_column="1"
                     android:layout_weight="1"
-                    android:backgroundTint="@android:color/holo_orange_light" />
+                    android:backgroundTint="@android:color/holo_blue_light" />
 
                 <Button
                     android:layout_width="0dp"

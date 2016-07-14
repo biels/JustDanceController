@@ -19,9 +19,9 @@
             android:key="acceleration-gamma"
             android:summary="Defines the exponent that is applied to the output acceleration vector, downscaled by a factor of 100."
             android:enabled="true"
-            android:defaultValue="110"
+            android:defaultValue="109"
 
-            sample:msbp_minValue="75"
+            sample:msbp_minValue="80"
             sample:msbp_maxValue="120"
             sample:msbp_interval="1"
             sample:msbp_measurementUnit="%"
@@ -70,7 +70,7 @@
         <SwitchPreference android:title="Lowest sensor delay"
             android:key="sensor-fastest"
             android:summary="Requests OS to provide sensor updates at the fastest rate."
-            android:defaultValue="true"/>
+            android:defaultValue="false"/>
 
 
     </PreferenceCategory>
